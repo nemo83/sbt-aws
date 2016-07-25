@@ -1,3 +1,4 @@
+import com.amazonaws.regions.Regions
 import sbt._
 
 object MyAutoPlugin extends AutoPlugin {
@@ -8,31 +9,24 @@ object MyAutoPlugin extends AutoPlugin {
 
     val aws = taskKey[Unit]("aws")
 
-    val awsConfigurationFolder = taskKey[String]("aws-configuration-root-folder")
-
     val createStack = taskKey[Unit]("create-stack")
 
-    val region = settingKey[String]("aws-region")
+    val region = settingKey[Regions]("aws-region")
 
   }
 
   import autoImport._
 
   def createStackTask() = Def.task {
-    println(s"using region: ${region.value}")
+    val awsRegion = (region in aws).value
+    println(s"using region: $awsRegion")
   }
 
-//  override def buildSettings: Seq[Def.Setting[_]] = Seq (
-//    region := "us-east-1",
-//    createStack in aws <<= createStackTask()
-//  )
 
-  override def projectSettings: Seq[Def.Setting[_]] = Seq (
+  override def projectSettings: Seq[Def.Setting[_]] = Seq(
+    region in aws := Regions.US_EAST_1,
     createStack in aws <<= createStackTask()
   )
 
-  override def globalSettings: Seq[Def.Setting[_]] = Seq (
-    region := "us-east-1"
-  )
 
 }
