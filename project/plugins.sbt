@@ -1,0 +1,1 @@
+addSbtPlugin("com.giogar" % "sbt-plugin" % "0.0.1-SNAPSHOT")
