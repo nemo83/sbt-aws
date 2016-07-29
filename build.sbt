@@ -8,5 +8,6 @@ val awsSdkVersion = "1.11.20"
 
 libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk" % awsSdkVersion withSources(),
-  "com.amazonaws" % "aws-java-sdk-cloudformation" % awsSdkVersion withSources()
+  "com.amazonaws" % "aws-java-sdk-cloudformation" % awsSdkVersion withSources(),
+  "com.amazonaws" % "aws-java-sdk-codedeploy" % awsSdkVersion withSources()
 )
