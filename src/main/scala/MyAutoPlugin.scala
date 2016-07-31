@@ -1,12 +1,15 @@
 import java.io.File
 
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
-import com.amazonaws.services.cloudformation.model.CreateStackRequest
+import com.amazonaws.services.cloudformation.model.{CreateStackRequest, DeleteStackRequest, DeleteStackResult, UpdateStackRequest}
 import com.giogar.aws.AwsClientBuilder
 import sbt.Keys._
 import sbt._
 import sbt.complete.DefaultParsers
+
+import collection.JavaConverters._
 
 object MyAutoPlugin extends AutoPlugin {
 
@@ -20,6 +23,7 @@ object MyAutoPlugin extends AutoPlugin {
 
     val region = settingKey[Regions]("aws-region")
 
+    val profile = settingKey[String]("aws-profile")
 
     // AWS Common Configuration
     val awsConfigurationRootFolder = settingKey[File]("AWS Configuration root folder")
@@ -27,8 +31,11 @@ object MyAutoPlugin extends AutoPlugin {
     // ** AWS Cloudformation **
     // Tasks
     val createStack = taskKey[Unit]("create-stack")
+    val updateStack = taskKey[Unit]("update-stack")
+    val deleteStack = taskKey[Unit]("delete-stack")
 
     // Settings
+    val capabilitiesIam = settingKey[String]("AWS capabilities IAM")
     val cloudformationStackName = settingKey[String]("AWS Cloudformation Stack name")
     val cloudformationFolder = settingKey[String]("AWS Cloudformation folder")
     val cloudformationTemplateFilename = settingKey[String]("AWS Cloudformation filename")
@@ -51,26 +58,75 @@ object MyAutoPlugin extends AutoPlugin {
   import autoImport._
 
   def createStackTask() = Def.task {
-
     val awsRegion = (region in aws).value
+    val awsProfile = (profile in aws).value
     val awsCloudformationConfigRoot = (awsConfigurationRootFolder in aws).value.getAbsolutePath + "/" + (cloudformationFolder in aws).value
     val stackName = (cloudformationStackName in aws).value
     val cloudformationTemplatePath = awsCloudformationConfigRoot + "/" + (cloudformationTemplateFilename in aws).value
 
-    println(s"CFN config root: ${awsCloudformationConfigRoot}")
+    val capability = (capabilitiesIam in aws).value
 
-    val stackRequest = new CreateStackRequest
+    println(s"CFN config root: ${awsCloudformationConfigRoot}")
+    println(s"CFN file: ${cloudformationTemplatePath}")
+
+    val stackRequest = new CreateStackRequest()
     stackRequest.setStackName(stackName)
-    stackRequest.setTemplateBody(cloudformationTemplatePath)
+    stackRequest.setCapabilities(Set(capability).asJava)
+    stackRequest.setTemplateBody(scala.io.Source.fromFile(cloudformationTemplatePath).mkString)
 
     val stackId = awsClientBuilder
-      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, null, null)
+      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, new ProfileCredentialsProvider(s"${sys.env("HOME")}/.aws/credentials", awsProfile), null)
       .createStack(stackRequest)
       .getStackId
 
     println(s"stackId: $stackId")
 
   }
+
+  def updateStackTask() = Def.task {
+    val awsRegion = (region in aws).value
+    val awsProfile = (profile in aws).value
+    val awsCloudformationConfigRoot = (awsConfigurationRootFolder in aws).value.getAbsolutePath + "/" + (cloudformationFolder in aws).value
+    val stackName = (cloudformationStackName in aws).value
+    val cloudformationTemplatePath = awsCloudformationConfigRoot + "/" + (cloudformationTemplateFilename in aws).value
+
+    val capability = (capabilitiesIam in aws).value
+
+    println(s"CFN config root: ${awsCloudformationConfigRoot}")
+    println(s"CFN file: ${cloudformationTemplatePath}")
+
+    val stackRequest = new UpdateStackRequest()
+    stackRequest.setStackName(stackName)
+    stackRequest.setCapabilities(Set(capability).asJava)
+    stackRequest.setTemplateBody(scala.io.Source.fromFile(cloudformationTemplatePath).mkString)
+
+    val stackId = awsClientBuilder
+      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, new ProfileCredentialsProvider(s"${sys.env("HOME")}/.aws/credentials", awsProfile), null)
+      .updateStack(stackRequest)
+      .getStackId
+
+    println(s"stackId: $stackId")
+  }
+
+  def deleteStackTask(): Def.Initialize[Task[Unit]] = Def.task {
+    val awsRegion = (region in aws).value
+    val awsProfile = (profile in aws).value
+    val awsCloudformationConfigRoot = (awsConfigurationRootFolder in aws).value.getAbsolutePath + "/" + (cloudformationFolder in aws).value
+    val stackName = (cloudformationStackName in aws).value
+    val cloudformationTemplatePath = awsCloudformationConfigRoot + "/" + (cloudformationTemplateFilename in aws).value
+
+    println(s"CFN config root: ${awsCloudformationConfigRoot}")
+    println(s"CFN file: ${cloudformationTemplatePath}")
+
+    val stackRequest = new DeleteStackRequest()
+    stackRequest.setStackName(stackName)
+
+    awsClientBuilder
+      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, new ProfileCredentialsProvider(s"${sys.env("HOME")}/.aws/credentials", awsProfile), null)
+      .deleteStack(stackRequest)
+
+  }
+
 
   def createDeploymentArchiveTask(): Def.Initialize[Task[sbt.File]] = Def.task {
     val source = (awsConfigurationRootFolder in aws).value.getAbsolutePath + "/" + (codedeployFolder in aws).value
@@ -103,8 +159,9 @@ object MyAutoPlugin extends AutoPlugin {
     cloudformationStackName in aws := name.value,
     cloudformationFolder in aws := "cloudformation",
     cloudformationTemplateFilename in aws := "cloudformation.template",
-    createStack in aws <<= createStackTask()
+    createStack in aws <<= createStackTask(),
+    updateStack in aws <<= updateStackTask(),
+    deleteStack in aws <<= deleteStackTask()
   )
-
 
 }
