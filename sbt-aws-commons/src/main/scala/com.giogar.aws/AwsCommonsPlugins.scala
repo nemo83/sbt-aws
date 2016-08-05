@@ -3,6 +3,7 @@ package com.giogar.aws
 import java.io.File
 
 import com.amazonaws.regions.Regions
+import com.giogar.aws.credentials.{AwsCredentialsProvider, ProfileCredentialsProvider}
 import sbt._
 
 object AwsCommonsPlugins extends AutoPlugin {
@@ -15,19 +16,18 @@ object AwsCommonsPlugins extends AutoPlugin {
 
     val region = settingKey[Regions]("aws-region")
 
-    val profile = settingKey[String]("aws-profile")
-
     // AWS Common Configuration
-    val awsConfigurationRootFolder = settingKey[File]("AWS Configuration root folder")
+    val configurationRootFolder = settingKey[File]("AWS Configuration root folder")
+
+    val credentialsProvider = settingKey[AwsCredentialsProvider]("Aws Credentials Provider to use")
 
   }
 
   import autoImport._
 
   override def projectSettings: Seq[Def.Setting[_]] = Seq(
-    // AWS Common
     region in aws := Regions.US_EAST_1,
-    awsConfigurationRootFolder in aws := file("src/main/resources/aws"),
-    profile in aws := "default"
+    configurationRootFolder in aws := file("src/main/resources/aws"),
+    credentialsProvider in aws := ProfileCredentialsProvider()
   )
 }

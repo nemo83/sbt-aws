@@ -36,7 +36,8 @@ lazy val `sbt-aws-codedeploy` = (project in file("sbt-aws-codedeploy"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-java-sdk-codedeploy" % awsSdkVersion withSources()
+      "com.amazonaws" % "aws-java-sdk-codedeploy" % awsSdkVersion withSources(),
+      "com.amazonaws" % "aws-java-sdk-s3" % awsSdkVersion withSources()
     )
   )
 
