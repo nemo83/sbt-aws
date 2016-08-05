@@ -62,9 +62,9 @@ object AwsCloudformationPlugin extends AutoPlugin {
     val capability = (capabilitiesIam in aws).value
 
     val stackRequest = new UpdateStackRequest()
-    stackRequest.setStackName(stackName)
-    stackRequest.setCapabilities(Set(capability).asJava)
-    stackRequest.setTemplateBody(scala.io.Source.fromFile(cloudformationTemplatePath).mkString)
+      .withStackName(stackName)
+      .withCapabilities(Set(capability).asJava)
+      .withTemplateBody(scala.io.Source.fromFile(cloudformationTemplatePath).mkString)
 
     val stackId = awsClientBuilder
       .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, awsCredentialsProvider.toAws, null)
@@ -81,7 +81,7 @@ object AwsCloudformationPlugin extends AutoPlugin {
     val cloudformationTemplatePath = awsCloudformationConfigRoot + "/" + (cloudformationTemplateFilename in aws).value
 
     val stackRequest = new DeleteStackRequest()
-    stackRequest.setStackName(stackName)
+      .withStackName(stackName)
 
     awsClientBuilder
       .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, awsCredentialsProvider.toAws, null)
