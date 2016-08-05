@@ -38,18 +38,18 @@ object AwsCloudformationPlugin extends AutoPlugin {
     val awsCloudformationConfigRoot = (configurationRootFolder in aws).value.getAbsolutePath + "/" + (cloudformationFolder in aws).value
     val stackName = (cloudformationStackName in aws).value
     val cloudformationTemplatePath = awsCloudformationConfigRoot + "/" + (cloudformationTemplateFilename in aws).value
-
     val capability = (capabilitiesIam in aws).value
 
     val stackRequest = new CreateStackRequest()
-    stackRequest.setStackName(stackName)
-    stackRequest.setCapabilities(Set(capability).asJava)
-    stackRequest.setTemplateBody(scala.io.Source.fromFile(cloudformationTemplatePath).mkString)
+      .withStackName(stackName)
+      .withCapabilities(Set(capability).asJava)
+      .withTemplateBody(scala.io.Source.fromFile(cloudformationTemplatePath).mkString)
 
     val stackId = awsClientBuilder
       .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, awsCredentialsProvider.toAws, null)
       .createStack(stackRequest)
       .getStackId
+
   }
 
   def updateStackTask() = Def.task {

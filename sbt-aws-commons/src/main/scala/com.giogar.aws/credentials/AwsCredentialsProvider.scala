@@ -4,9 +4,7 @@ sealed trait AwsCredentialsProvider
 
 case class ProfileCredentialsProvider(profilesConfigFilePath: String = s"${sys.env("HOME")}/.aws/credentials", profileName: String = "default") extends AwsCredentialsProvider
 
-trait ConvertibleCredentialsProvider {
-
-  def awsCredentialsProvider: AwsCredentialsProvider
+class ConvertibleCredentialsProvider(val awsCredentialsProvider: AwsCredentialsProvider) {
 
   def toAws: com.amazonaws.auth.AWSCredentialsProvider = {
     awsCredentialsProvider match {
@@ -18,10 +16,6 @@ trait ConvertibleCredentialsProvider {
 
 object AwsCredentialsProvider {
 
-  implicit def toConvertibleCredentialsProvider(awsCredentialsProvider: AwsCredentialsProvider): ConvertibleCredentialsProvider = {
-    new ConvertibleCredentialsProvider {
-      override def awsCredentialsProvider: AwsCredentialsProvider = awsCredentialsProvider
-    }
-  }
+  implicit def toConvertibleCredentialsProvider(awsCredentialsProvider: AwsCredentialsProvider): ConvertibleCredentialsProvider = new ConvertibleCredentialsProvider(awsCredentialsProvider)
 
 }
