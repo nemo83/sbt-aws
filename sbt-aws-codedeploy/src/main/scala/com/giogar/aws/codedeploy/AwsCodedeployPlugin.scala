@@ -2,18 +2,22 @@ package com.giogar.aws.codedeploy
 
 import java.io.File
 
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.codedeploy.AmazonCodeDeployClient
 import com.amazonaws.services.codedeploy.model._
 import com.amazonaws.services.s3.AmazonS3Client
+import com.giogar.aws.AwsCommonsPlugins
+import com.giogar.aws.AwsCommonsPlugins._
 import com.giogar.aws.AwsCommonsPlugins.autoImport._
 import com.giogar.aws.builder.AwsClientBuilder
-import com.giogar.aws.credentials.AwsCredentialsProvider
 import sbt.Keys._
 import sbt._
 import sbt.complete.DefaultParsers
 
 object AwsCodedeployPlugin extends AutoPlugin {
+
+  override def requires: Plugins = AwsCommonsPlugins
 
   override def trigger: PluginTrigger = allRequirements
 
@@ -39,36 +43,43 @@ object AwsCodedeployPlugin extends AutoPlugin {
 
   import autoImport._
 
+  def source() = Def.task [String]{
+    (configurationRootFolder in aws).value.getAbsolutePath + "/" + (codedeployFolder in aws).value
+  }
+
+  def zipFilePath() = Def.task[String] {
+    target.value + "/codedeploy/deployment.zip"
+  }
+
+  def awsCodedeployBucketName()= Def.task [String]{
+    (codedeployS3Bucket in aws).value
+  }
+
+  def applicationName() = Def.task[String] {
+    (codedeployApplicationName in aws).value
+  }
+
+  def key() =  Def.task[String] {
+    s"${(codedeployS3Key in aws).value}-${version.value}"
+  }
+
   def pushTask = Def.task[Unit] {
     // Zipping deployment files
-    val source = (configurationRootFolder in aws).value.getAbsolutePath + "/" + (codedeployFolder in aws).value
-    val zipFilePath = target.value + "/codedeploy/deployment.zip"
-
-    val deploymentFile = createDeploymentArchiveTask(source, zipFilePath)
+    val deploymentFile = createDeploymentArchiveTask(source.value, zipFilePath.value)
 
     // S3 copy
-    val awsRegion = (region in aws).value
-    val awsCredentialsProvider = (credentialsProvider in aws).value
-    val awsCodedeployBucketName = (codedeployS3Bucket in aws).value
-    println(s"awsCodedeployBucketName: $awsCodedeployBucketName")
-
-    val key = s"${(codedeployS3Key in aws).value}-${version.value}"
-    println(s"key: $key")
-
-    val eTag = copyDeploymentArchiveToS3BucketTask(awsRegion,
-      awsCredentialsProvider,
-      awsCodedeployBucketName,
-      key,
+    val eTag = copyDeploymentArchiveToS3BucketTask(awsRegion.value,
+      awsCredentialsProvider.value,
+      awsCodedeployBucketName.value,
+      key.value,
       deploymentFile)
 
-    val applicationName = (codedeployApplicationName in aws).value
-    val applicationVersion = version.value
-    registerDeploymentTask(awsRegion,
-      awsCredentialsProvider,
-      applicationName,
-      awsCodedeployBucketName,
-      key,
-      applicationVersion,
+    registerDeploymentTask(awsRegion.value,
+      awsCredentialsProvider.value,
+      applicationName.value,
+      awsCodedeployBucketName.value,
+      key.value,
+      version.value,
       eTag)
 
   }
@@ -80,19 +91,18 @@ object AwsCodedeployPlugin extends AutoPlugin {
   }
 
   def copyDeploymentArchiveToS3BucketTask(awsRegion: Regions,
-                                          awsCredentialsProvider: AwsCredentialsProvider,
+                                          awsCredentialsProvider: AWSCredentialsProvider,
                                           awsCodedeployBucketName: String,
                                           key: String,
                                           deploymentFile: File): String = {
-
     val result = awsClientBuilder
-      .createAWSClient(classOf[AmazonS3Client], awsRegion, awsCredentialsProvider.toAws, null)
+      .createAWSClient(classOf[AmazonS3Client], awsRegion, awsCredentialsProvider, null)
       .putObject(awsCodedeployBucketName, key, deploymentFile)
     result.getETag
   }
 
   def registerDeploymentTask(awsRegion: Regions,
-                             awsCredentialsProvider: AwsCredentialsProvider,
+                             awsCredentialsProvider: AWSCredentialsProvider,
                              applicationName: String,
                              awsCodedeployBucketName: String,
                              key: String,
@@ -107,7 +117,7 @@ object AwsCodedeployPlugin extends AutoPlugin {
       .withETag(eTag)
 
     val result = awsClientBuilder
-      .createAWSClient(classOf[AmazonCodeDeployClient], awsRegion, awsCredentialsProvider.toAws, null)
+      .createAWSClient(classOf[AmazonCodeDeployClient], awsRegion, awsCredentialsProvider, null)
       .registerApplicationRevision(
         new RegisterApplicationRevisionRequest()
           .withApplicationName(applicationName)

@@ -2,6 +2,7 @@ package com.giogar.aws
 
 import java.io.File
 
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.regions.Regions
 import com.giogar.aws.credentials.{AwsCredentialsProvider, ProfileCredentialsProvider}
 import sbt._
@@ -24,6 +25,19 @@ object AwsCommonsPlugins extends AutoPlugin {
   }
 
   import autoImport._
+
+  // Helper Taska to avoid repetitions
+  def awsRegion() = Def.task[Regions] {
+    (region in aws).value
+  }
+
+  def awsConfigurationRootFolderPath() = Def.task[String] {
+    (configurationRootFolder in aws).value.getAbsolutePath
+  }
+
+  def awsCredentialsProvider() = Def.task[AWSCredentialsProvider] {
+    (credentialsProvider in aws).value.toAws
+  }
 
   override def projectSettings: Seq[Def.Setting[_]] = Seq(
     region in aws := Regions.US_EAST_1,

@@ -1,9 +1,9 @@
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
 import com.amazonaws.services.cloudformation.model.{CreateStackRequest, DeleteStackRequest, UpdateStackRequest}
 import com.giogar.aws.AwsCommonsPlugins
+import com.giogar.aws.AwsCommonsPlugins._
 import com.giogar.aws.AwsCommonsPlugins.autoImport._
 import com.giogar.aws.builder.AwsClientBuilder
-import com.giogar.aws.credentials.AwsCredentialsProvider.toConvertibleCredentialsProvider
 import sbt.Keys._
 import sbt._
 
@@ -32,61 +32,56 @@ object AwsCloudformationPlugin extends AutoPlugin {
 
   import autoImport._
 
-  def createStackTask() = Def.task {
-    val awsRegion = (region in aws).value
-    val awsCredentialsProvider = (credentialsProvider in aws).value
-    val awsCloudformationConfigRoot = (configurationRootFolder in aws).value.getAbsolutePath + "/" + (cloudformationFolder in aws).value
-    val stackName = (cloudformationStackName in aws).value
-    val cloudformationTemplatePath = awsCloudformationConfigRoot + "/" + (cloudformationTemplateFilename in aws).value
-    val capability = (capabilitiesIam in aws).value
 
+  // Helper tasks to avoid repetition
+  def awsCloudformationConfigRoot() = Def.task[String] {
+    awsConfigurationRootFolderPath.value + "/" + (cloudformationFolder in aws).value
+  }
+
+  def stackName() = Def.task[String] {
+    (cloudformationStackName in aws).value
+  }
+
+  def cloudformationTemplateBody() = Def.task[String] {
+    val cloudformationTemplatePath = awsCloudformationConfigRoot.value + "/" + (cloudformationTemplateFilename in aws).value
+    scala.io.Source.fromFile(cloudformationTemplatePath).mkString
+  }
+
+  def capability() = Def.task[String] {
+    (capabilitiesIam in aws).value
+  }
+
+  def createStackTask() = Def.task {
     val stackRequest = new CreateStackRequest()
-      .withStackName(stackName)
-      .withCapabilities(Set(capability).asJava)
-      .withTemplateBody(scala.io.Source.fromFile(cloudformationTemplatePath).mkString)
+      .withStackName(stackName.value)
+      .withCapabilities(Set(capability.value).asJava)
+      .withTemplateBody(cloudformationTemplateBody.value)
 
     val stackId = awsClientBuilder
-      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, awsCredentialsProvider.toAws, null)
+      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion.value, awsCredentialsProvider.value, null)
       .createStack(stackRequest)
       .getStackId
-
   }
 
   def updateStackTask() = Def.task {
-    val awsRegion = (region in aws).value
-    val awsCredentialsProvider = (credentialsProvider in aws).value
-    val awsCloudformationConfigRoot = (configurationRootFolder in aws).value.getAbsolutePath + "/" + (cloudformationFolder in aws).value
-    val stackName = (cloudformationStackName in aws).value
-    val cloudformationTemplatePath = awsCloudformationConfigRoot + "/" + (cloudformationTemplateFilename in aws).value
-
-    val capability = (capabilitiesIam in aws).value
-
     val stackRequest = new UpdateStackRequest()
-      .withStackName(stackName)
-      .withCapabilities(Set(capability).asJava)
-      .withTemplateBody(scala.io.Source.fromFile(cloudformationTemplatePath).mkString)
+      .withStackName(stackName.value)
+      .withCapabilities(Set(capability.value).asJava)
+      .withTemplateBody(cloudformationTemplateBody.value)
 
     val stackId = awsClientBuilder
-      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, awsCredentialsProvider.toAws, null)
+      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion.value, awsCredentialsProvider.value, null)
       .updateStack(stackRequest)
       .getStackId
 
   }
 
   def deleteStackTask(): Def.Initialize[Task[Unit]] = Def.task {
-    val awsRegion = (region in aws).value
-    val awsCredentialsProvider = (credentialsProvider in aws).value
-    val awsCloudformationConfigRoot = (configurationRootFolder in aws).value.getAbsolutePath + "/" + (cloudformationFolder in aws).value
-    val stackName = (cloudformationStackName in aws).value
-    val cloudformationTemplatePath = awsCloudformationConfigRoot + "/" + (cloudformationTemplateFilename in aws).value
-
     val stackRequest = new DeleteStackRequest()
-      .withStackName(stackName)
-
+      .withStackName(stackName.value)
     awsClientBuilder
-      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion, awsCredentialsProvider.toAws, null)
+      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion.value, awsCredentialsProvider.value, null)
       .deleteStack(stackRequest)
-
   }
 
   override def projectSettings: Seq[Def.Setting[_]] = Seq(
