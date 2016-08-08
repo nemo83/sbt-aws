@@ -11,13 +11,14 @@ import com.giogar.aws.AwsCommonsPlugins
 import com.giogar.aws.AwsCommonsPlugins._
 import com.giogar.aws.AwsCommonsPlugins.autoImport._
 import com.giogar.aws.builder.AwsClientBuilder
+import com.giogar.aws.cloudformation.AwsCloudformationPlugin
 import sbt.Keys._
 import sbt._
 import sbt.complete.DefaultParsers
 
 object AwsCodedeployPlugin extends AutoPlugin {
 
-  override def requires: Plugins = AwsCommonsPlugins
+  override def requires: Plugins = AwsCommonsPlugins && AwsCloudformationPlugin
 
   override def trigger: PluginTrigger = allRequirements
 
@@ -126,10 +127,17 @@ object AwsCodedeployPlugin extends AutoPlugin {
             .withS3Location(s3Location)))
   }
 
+  def getApplicationNameTask() = Def.taskDyn[String] {
+    val applicaitonName = applicationName.value
+    AwsCloudformationPlugin.getPhysicalResourceIdTask(applicaitonName)
+  }
+
   def deployTask: Def.Initialize[InputTask[String]] = Def.inputTask {
     // TODO: Implement ME!!!
     val args: Seq[String] = DefaultParsers.spaceDelimited("<arg>").parsed
     args foreach println
+
+    println(s"application physical id: ${getApplicationNameTask.value}")
     //    val awsRegion = (region in aws).value
     //    val awsCodedeployConfigRoot = (awsConfigurationRootFolder in aws).value.getAbsolutePath + "/" + (codedeployFolder in aws).value
     //    println(s"CD config root: ${awsCodedeployConfigRoot}")

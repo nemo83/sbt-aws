@@ -1,5 +1,7 @@
+package com.giogar.aws.cloudformation
+
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient
-import com.amazonaws.services.cloudformation.model.{CreateStackRequest, DeleteStackRequest, UpdateStackRequest}
+import com.amazonaws.services.cloudformation.model.{CreateStackRequest, DeleteStackRequest, DescribeStackResourceRequest, UpdateStackRequest}
 import com.giogar.aws.AwsCommonsPlugins
 import com.giogar.aws.AwsCommonsPlugins._
 import com.giogar.aws.AwsCommonsPlugins.autoImport._
@@ -82,6 +84,18 @@ object AwsCloudformationPlugin extends AutoPlugin {
     awsClientBuilder
       .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion.value, awsCredentialsProvider.value, null)
       .deleteStack(stackRequest)
+  }
+
+  def getPhysicalResourceIdTask(logicalResourceName: String) = Def.task[String] {
+    val describeResourceRequest = new DescribeStackResourceRequest() // this could be DescribeStackS instead!!
+      .withStackName(stackName.value)
+      .withLogicalResourceId(logicalResourceName)
+
+    awsClientBuilder
+      .createAWSClient(classOf[AmazonCloudFormationClient], awsRegion.value, awsCredentialsProvider.value, null)
+      .describeStackResource(describeResourceRequest)
+      .getStackResourceDetail
+      .getPhysicalResourceId
   }
 
   override def projectSettings: Seq[Def.Setting[_]] = Seq(

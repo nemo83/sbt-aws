@@ -32,7 +32,7 @@ lazy val `sbt-aws-cloudformation` = (project in file("sbt-aws-cloudformation"))
   )
 
 lazy val `sbt-aws-codedeploy` = (project in file("sbt-aws-codedeploy"))
-  .dependsOn(`sbt-aws-commons`)
+  .dependsOn(`sbt-aws-cloudformation`, `sbt-aws-commons`)
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
